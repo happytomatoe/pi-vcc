@@ -149,7 +149,8 @@ export function resolveTriggerTokens(
   if (contextWindow <= 0) return undefined;
 
   if (threshold.reserveTokens != null) {
-    return contextWindow - threshold.reserveTokens;
+    const t = contextWindow - threshold.reserveTokens;
+    return t > 0 ? t : undefined;
   }
 
   if (threshold.compactAtTokens != null) {
@@ -161,7 +162,7 @@ export function resolveTriggerTokens(
   if (threshold.compactPercent != null) {
     const pct = threshold.compactPercent;
     if (pct < 1 || pct > 99) return undefined;
-    return Math.round(contextWindow * (1 - pct / 100));
+    return Math.round(contextWindow * pct / 100);
   }
 
   return undefined;
