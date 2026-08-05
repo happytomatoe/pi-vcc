@@ -6,12 +6,6 @@ type ProactiveContext = {
   getContextUsage?: () => any;
   compact?: (options?: any) => void;
   ui?: any;
-  sessionManager?: {
-    getEntries?: () => any[];
-    getBranch?: () => any[];
-    buildContextEntries?: () => any[];
-    getLeafId?: () => string;
-  };
 };
 
 const formatTokens = (n: number): string => {
@@ -26,10 +20,6 @@ const COOLDOWN_MS = 3000;
 // Flag: when true, session_before_compact knows we initiated this compaction
 let proactiveTriggerActive = false;
 
-// Turn counter: skip N turns after compaction to let session build up
-let turnsSkippedAfterCompact = 0;
-const SKIP_TURNS_ENV = "PI_VCC_SKIP_TURNS_AFTER_COMPACT";
-
 const setCooldown = () => { lastCompactTime = Date.now(); };
 const isCoolingDown = () => Date.now() - lastCompactTime < COOLDOWN_MS;
 
@@ -40,17 +30,6 @@ export const isProactiveTriggerActive = () => proactiveTriggerActive;
 export const resetProactiveState = () => {
   lastCompactTime = 0;
   proactiveTriggerActive = false;
-  turnsSkippedAfterCompact = 0;
-};
-
-/** Get configured number of turns to skip after compaction. */
-const getSkipTurnsAfterCompact = (): number => {
-  const envVal = process.env[SKIP_TURNS_ENV];
-  if (envVal) {
-    const parsed = parseInt(envVal, 10);
-    if (!isNaN(parsed) && parsed >= 0) return parsed;
-  }
-  return 0;
 };
 
 /**
@@ -77,16 +56,6 @@ const checkAndTrigger = (ctx: ProactiveContext, source: string) => {
 
   // Cooldown guard — prevent double-trigger within 3s of last compaction.
   if (isCoolingDown()) return;
-
-  // Turn skip guard — after compaction, skip N turns to let session build up
-  if (turnsSkippedAfterCompact > 0) return;
-
-  // Guard: Don't trigger if there are too few messages (buildOwnCut requires >2)
-  const entries = ctx.sessionManager?.getEntries?.();
-  if (entries) {
-    const messageCount = entries.filter((e: any) => e.type === 'message').length;
-    if (messageCount <= 2) return;
-  }
 
   try {
     const pct = Math.round((usage.tokens / contextWindow) * 100);
@@ -117,8 +86,6 @@ const checkAndTrigger = (ctx: ProactiveContext, source: string) => {
  *    different threshold. Check immediately.
  *
  * 3. `session_compact` — cooldown tracking + clear proactiveTriggerActive.
- *
- * 4. `agent_end` — decrement turn skip counter after compaction.
  */
 export const registerProactiveThresholdHook = (pi: ExtensionAPI) => {
   pi.on("agent_end", (_event, ctx) => {
@@ -129,29 +96,15 @@ export const registerProactiveThresholdHook = (pi: ExtensionAPI) => {
     checkAndTrigger(ctx, "model-switch");
   });
 
-  // Track compaction completion: set cooldown, set skip turns, clear self-initiated flag
+  // Track compaction completion: set cooldown and clear self-initiated flag
   pi.on("session_compact", () => {
     setCooldown();
     proactiveTriggerActive = false;
-
-    // Set turn skip counter after compaction
-    const skipTurns = getSkipTurnsAfterCompact();
-    if (skipTurns > 0) {
-      turnsSkippedAfterCompact = skipTurns;
-    }
-  });
-
-  // Decrement turn skip counter on each agent_end (fires after compaction)
-  pi.on("agent_end", () => {
-    if (turnsSkippedAfterCompact > 0) {
-      turnsSkippedAfterCompact--;
-    }
   });
 
   // Reset state on session start so state doesn't leak between sessions
   pi.on("session_start", () => {
     lastCompactTime = 0;
     proactiveTriggerActive = false;
-    turnsSkippedAfterCompact = 0;
   });
 };
