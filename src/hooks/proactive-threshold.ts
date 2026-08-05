@@ -49,7 +49,7 @@ const checkAndTrigger = (ctx: ProactiveContext, source: string) => {
   if (effectiveThreshold == null) return;
 
   const usage = ctx.getContextUsage?.();
-  if (!usage || usage.tokens === null) return;
+  if (!usage || usage.tokens == null) return;
 
   // Only trigger if context EXCEEDS the threshold.
   if (usage.tokens <= effectiveThreshold) return;
@@ -71,7 +71,13 @@ const checkAndTrigger = (ctx: ProactiveContext, source: string) => {
   // Mark that this compaction was triggered by us
   proactiveTriggerActive = true;
 
-  ctx.compact?.();
+  try {
+    ctx.compact?.();
+  } catch {
+    // If compact() throws, clear the flag so stale state doesn't
+    // cause incorrect auto-continue on the next non-proactive compaction.
+    proactiveTriggerActive = false;
+  }
 };
 
 /**

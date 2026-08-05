@@ -31,7 +31,7 @@ const writeConfig = (config: Config): void => {
 const parseThresholdArg = (arg: string): number | null => {
   const trimmed = arg.trim().toUpperCase();
   // Match: "5k", "5K", "5000", "5.5k"
-  const match = trimmed.match(/^([\d.]+)(K)?$/);
+  const match = trimmed.match(/^(\d+(?:\.\d+)?)(K)?$/);
   if (!match) return null;
   const num = parseFloat(match[1]);
   if (!Number.isFinite(num) || num < 0) return null;
