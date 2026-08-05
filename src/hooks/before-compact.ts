@@ -7,7 +7,6 @@ import { loadSettings, type PiVccSettings } from "../core/settings";
 import { calibrateCharsPerToken, estimateMessageContentChars, estimateTokensFromChars } from "../core/token-estimate";
 import type { PiVccCompactionDetails } from "../details";
 import type { CompactionReason } from "../types";
-import { isProactiveTriggerActive } from "./proactive-threshold";
 
 export { PI_VCC_COMPACT_INSTRUCTION } from "../core/compact-args";
 
@@ -30,7 +29,6 @@ export interface CompactionStats {
 
 let lastStats: CompactionStats | null = null;
 let lastCompactWasPiVcc = false;
-let lastCompactWasProactive = false;
 let pendingFollowUpPrompt: string | null = null;
 const AUTO_CONTINUE_CUSTOM_TYPE = "pi-vcc-auto-continue";
 const AUTO_CONTINUE_PROMPT = "Continue from where you left off after automatic context compaction. Do not restate the compaction summary; proceed with the task.";
@@ -561,7 +559,6 @@ export const registerBeforeCompactHook = (pi: ExtensionAPI) => {
     };
 
     lastCompactWasPiVcc = isPiVcc;
-    lastCompactWasProactive = isProactiveTriggerActive();
 
     return {
       compaction: {
@@ -584,10 +581,7 @@ export const registerBeforeCompactHook = (pi: ExtensionAPI) => {
     if (willRetry) return;
     const stats = lastStats;
     if (!stats) return;
-    const shouldContinueAfterAutoCompact =
-      lastCompactWasProactive ||
-      ((reason === "threshold" || reason === "overflow") && loadSettings().continueAfterThresholdCompact);
-    lastCompactWasProactive = false;
+    const shouldContinueAfterAutoCompact = (reason === "threshold" || reason === "overflow") && loadSettings().continueAfterThresholdCompact;
     scheduleCompactionStatsNotify(ctx, stats);
     if (followUpPrompt) {
       try {
