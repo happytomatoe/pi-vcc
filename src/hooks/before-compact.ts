@@ -32,6 +32,7 @@ let lastStats: CompactionStats | null = null;
 let lastCompactWasPiVcc = false;
 let lastCompactWasProactive = false;
 let pendingFollowUpPrompt: string | null = null;
+let pendingAutoContinueAfterCompact = false;
 const AUTO_CONTINUE_CUSTOM_TYPE = "pi-vcc-auto-continue";
 const AUTO_CONTINUE_PROMPT = "Continue from where you left off after automatic context compaction. Do not restate the compaction summary; proceed with the task.";
 let pendingAutoContinueTimer: ReturnType<typeof setTimeout> | null = null;
@@ -575,6 +576,7 @@ export const registerBeforeCompactHook = (pi: ExtensionAPI) => {
 
   // Fire success toast for /compact path only (delayed to let UI settle).
   // /pi-vcc path uses its own onComplete callback in the command handler.
+  // Track whether we should auto-continue after compaction completes.
   pi.on("session_compact", async (event, ctx) => {
     const { reason, willRetry } = readCompactionEventContext(event);
     if (!event.fromExtension) return;
@@ -594,6 +596,17 @@ export const registerBeforeCompactHook = (pi: ExtensionAPI) => {
         await pi.sendUserMessage(followUpPrompt);
       } catch {}
     } else if (shouldContinueAfterAutoCompact) {
+      // Set flag to auto-continue after agent settles (not immediately).
+      // session_compact fires BEFORE retries complete, so we must wait for agent_settled.
+      pendingAutoContinueAfterCompact = true;
+    }
+  });
+
+  // Auto-continue after compaction + retries are fully complete.
+  // agent_settled fires after ALL retries, compaction, and follow-ups are done.
+  pi.on("agent_settled", async (_event, _ctx) => {
+    if (pendingAutoContinueAfterCompact) {
+      pendingAutoContinueAfterCompact = false;
       scheduleAutoContinue(pi);
     }
   });

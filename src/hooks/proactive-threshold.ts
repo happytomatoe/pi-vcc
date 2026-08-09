@@ -94,7 +94,7 @@ const checkAndTrigger = (ctx: ProactiveContext, source: string) => {
  * 3. `session_compact` — cooldown tracking + clear proactiveTriggerActive.
  */
 export const registerProactiveThresholdHook = (pi: ExtensionAPI) => {
-  pi.on("agent_end", (_event, ctx) => {
+  pi.on("turn_end", (_event, ctx) => {
     checkAndTrigger(ctx, "auto");
   });
 

@@ -101,10 +101,27 @@ const readJson = (path: string): Record<string, unknown> | null => {
 };
 
 export function loadSettings(): PiVccSettings {
-  const parsed = readJson(settingsPath());
-  if (!parsed || typeof parsed !== "object") return { ...DEFAULT_SETTINGS };
-  return { ...DEFAULT_SETTINGS, ...(parsed as Partial<PiVccSettings>) };
-}
+         const parsed = readJson(settingsPath());
+         const base = parsed && typeof parsed === "object"
+           ? { ...DEFAULT_SETTINGS, ...(parsed as Partial<PiVccSettings>) }
+           : { ...DEFAULT_SETTINGS };
+
+         // Env var overrides (for e2e testing)
+         const envThreshold = process.env.PI_VCC_THRESHOLD;
+         if (envThreshold != null) {
+           const n = parseInt(envThreshold, 10);
+           if (Number.isFinite(n) && n >= 1) {
+             base.globalThreshold = { compactAtTokens: n };
+           }
+         }
+
+         const envDebug = process.env.PI_VCC_DEBUG;
+         if (envDebug === "1" || envDebug === "true") {
+           base.debug = true;
+         }
+
+         return base;
+       }
 
 /**
  * Resolve the effective ModelThreshold for a given model.
