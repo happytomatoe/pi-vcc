@@ -40,7 +40,7 @@ e2e/
 The tests verify:
 
 - **Compaction notification**: Screen shows "pi-vcc:.*Compacting" or "kept.*turns"
-- **Agent continuation**: Screen shows activity after compaction
+- **Agent continuation**: Screen shows activity after compaction (test fails if not observed)
 
 Debug output is written to `/tmp/pi-vcc-debug.json` when `PI_VCC_DEBUG=1`.
 

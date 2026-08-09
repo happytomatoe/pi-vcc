@@ -109,10 +109,11 @@ export function loadSettings(): PiVccSettings {
          // Env var overrides (for e2e testing)
          const envThreshold = process.env.PI_VCC_THRESHOLD;
          if (envThreshold != null) {
-           const n = parseInt(envThreshold, 10);
-           if (Number.isFinite(n) && n >= 1) {
+           const n = Number(envThreshold);
+           if (Number.isSafeInteger(n) && n >= 1) {
              base.globalThreshold = { compactAtTokens: n };
            }
+         }
          }
 
          const envDebug = process.env.PI_VCC_DEBUG;

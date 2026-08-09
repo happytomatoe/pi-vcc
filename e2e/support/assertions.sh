@@ -39,14 +39,14 @@ assert_compactor() {
     pass "Compactor is pi-vcc"
     return 0
   fi
-  # Fallback: check if summaryLength exists (means compaction happened)
-  local summary_len
-  summary_len=$(jq -r '.summaryLength // 0' "$debug_file" 2>/dev/null)
-  if [ "$summary_len" -gt 0 ] 2>/dev/null; then
-    pass "Compaction completed (summaryLength: $summary_len)"
+  # Check if debug file has valid compaction data
+  local has_valid_data
+  has_valid_data=$(jq -e '.compactor == "pi-vcc" or (.summaryLength // 0) > 0' "$debug_file" 2>/dev/null)
+  if [ $? -eq 0 ]; then
+    pass "Compaction completed (compactor: $compactor)"
     return 0
   fi
-  fail "No compaction detected (compactor='$compactor', summaryLength='$summary_len')"
+  fail "No compaction detected (compactor='$compactor')"
   return 1
 }
 

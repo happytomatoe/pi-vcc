@@ -110,9 +110,11 @@ elif echo "$SCREEN" | grep -qiE "(created|wrote|file|app\.py|models\.py|README|s
 elif echo "$SCREEN" | grep -qiE "(Retrying|retry)"; then
   pass "LLM is retrying after compaction"
 else
-  warn "LLM may have stopped working"
+  fail "LLM stopped working after compaction"
   echo "  Screen output:"
   echo "$SCREEN" | tail -10 | sed 's/^/    /'
+  echo "=== TEST FAILED ==="
+  exit 1
 fi
 
 # Check debug file if it exists
