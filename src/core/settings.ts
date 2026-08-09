@@ -2,8 +2,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { dirname, join } from "path";
 
-export const SETTINGS_PATH_DEFAULT = join(homedir(), ".pi", "agent", "pi-vcc-config.json");
-const settingsPath = (): string => process.env.PI_VCC_CONFIG_PATH ?? SETTINGS_PATH_DEFAULT;
+export const SETTINGS_PATH_DEFAULT = join(
+  homedir(),
+  ".pi",
+  "agent",
+  "pi-vcc-config.json",
+);
+const settingsPath = (): string =>
+  process.env.PI_VCC_CONFIG_PATH ?? SETTINGS_PATH_DEFAULT;
 /** Backwards-compat export. Resolves at access time, not import time. */
 export const SETTINGS_PATH = settingsPath();
 
@@ -90,6 +96,7 @@ export const DEFAULT_SETTINGS: PiVccSettings = {
   smartKeepTail: true,
   continueAfterThresholdCompact: true,
   debug: false,
+  globalThreshold: { compactAtTokens: 128000 },
 };
 
 const readJson = (path: string): Record<string, unknown> | null => {
@@ -102,8 +109,26 @@ const readJson = (path: string): Record<string, unknown> | null => {
 
 export function loadSettings(): PiVccSettings {
   const parsed = readJson(settingsPath());
-  if (!parsed || typeof parsed !== "object") return { ...DEFAULT_SETTINGS };
-  return { ...DEFAULT_SETTINGS, ...(parsed as Partial<PiVccSettings>) };
+  const base =
+    parsed && typeof parsed === "object"
+      ? { ...DEFAULT_SETTINGS, ...(parsed as Partial<PiVccSettings>) }
+      : { ...DEFAULT_SETTINGS };
+
+  // Env var overrides (for e2e testing)
+  const envThreshold = process.env.PI_VCC_THRESHOLD;
+  if (envThreshold != null) {
+    const n = Number(envThreshold);
+    if (Number.isSafeInteger(n) && n >= 1) {
+      base.globalThreshold = { compactAtTokens: n };
+    }
+  }
+
+  const envDebug = process.env.PI_VCC_DEBUG;
+  if (envDebug === "1" || envDebug === "true") {
+    base.debug = true;
+  }
+
+  return base;
 }
 
 /**
@@ -121,7 +146,9 @@ export function getModelThreshold(
 ): ModelThreshold | undefined {
   if (!model) return settings.globalThreshold;
 
-  const providerModelId = model.provider ? `${model.provider}/${model.id}` : undefined;
+  const providerModelId = model.provider
+    ? `${model.provider}/${model.id}`
+    : undefined;
 
   // Exact match on provider/modelId
   if (providerModelId && settings.modelThresholds?.[providerModelId]) {
@@ -162,7 +189,7 @@ export function resolveTriggerTokens(
   if (threshold.compactPercent != null) {
     const pct = threshold.compactPercent;
     if (pct < 1 || pct > 99) return undefined;
-    return Math.round(contextWindow * pct / 100);
+    return Math.round((contextWindow * pct) / 100);
   }
 
   return undefined;
