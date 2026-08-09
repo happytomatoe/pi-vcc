@@ -1,0 +1,24 @@
+{
+  "entry": ["index.ts"],
+  "project": ["src/**/*.ts"],
+  "ignoreDependencies": [
+    "@mariozechner/pi-coding-agent",
+    "@earendil-works/pi-ai",
+    "jscpd",
+    "prettier",
+    "lefthook"
+  ],
+  "ignore": [
+    "src/commands/**",
+    "src/hooks/**",
+    "src/tools/**",
+    "src/core/brief.ts",
+    "src/core/content.ts",
+    "src/core/rank.ts",
+    "src/core/summarize.ts",
+    "src/core/token-estimate.ts",
+    "src/core/lineage.ts",
+    "src/core/settings.ts",
+    "src/core/report.ts"
+  ]
+}

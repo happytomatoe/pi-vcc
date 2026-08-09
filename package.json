@@ -22,5 +22,10 @@
     "extensions": [
       "./index.ts"
     ]
+  },
+  "devDependencies": {
+    "jscpd": "^5.0.14",
+    "knip": "^6.32.0",
+    "prettier": "^3.9.6"
   }
 }

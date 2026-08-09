@@ -1,0 +1,26 @@
+# Lefthook configuration for pi-vcc
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: prettier
+      glob: "*.{ts,js,json,md,yml,yaml}"
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+
+    - name: jscpd
+      glob: "*.{ts,js}"
+      exclude:
+        - "e2e/casts/**"
+        - ".git/**"
+        - "node_modules/**"
+      run: npx jscpd --min-lines 5 --min-tokens 50 --reporters console
+
+    - name: knip
+      run: npx knip --no-progress
+
+pre-push:
+  jobs:
+    - name: e2e-test
+      run: bash e2e/test.sh
+      timeout: 300s
